@@ -112,12 +112,27 @@ export const run = async (events: any[]) => {
       //     inferredCategory = 'bug';
       //   }
       // }
-      const BugKeywords = /bug|uninstall|loading|error|closes|solve|problem/i.test(review.text);
+     
+      const discountsKeywords = /discounts_offers|deals|discounts|offers/i.test(review.text);
+      const appinterfaceKeywords = /app_interface|friendly|easy|seamless|experience|commendable|nice|option|user-friendly/i.test(review.text);
+      const customersupportKeywords = /customer_support|customer|support|chat|service|worst|dealing/i.test(review.text);
+      const easeofreturnKeywords = /ease_of_return|return|pickup|cancelled/i.test(review.text);
+      const BugKeywords = /bug|uninstall|loading|error|closes|solve|lag|problem/i.test(review.text);
+      const featurerequestKeywords = /feature_request|feature/i.test(review.text);
+      const questionKeywords = /question|why|what/i.test(review.text);
       const FeedbackKeywords = /feedback|easy|useful|features|safe|reliable|secure|best|great|secure/i.test(review.text);
 
-      let inferredCategory = BugKeywords ? 'bug' : (FeedbackKeywords ? 'feedback' : 'failed_to_infer_category');
-
-
+      let inferredCategory = discountsKeywords       ? 'discounts_offers'    : 
+                            (appinterfaceKeywords    ? 'app_interface'       : 
+                            (customersupportKeywords ? 'customer_support'    :
+                            (easeofreturnKeywords    ? 'ease_of_return'      : 
+                            (BugKeywords             ? 'bug'                 :
+                            (featurerequestKeywords  ? 'feature_request'     : 
+                            (questionKeywords        ? 'question'            : 
+                            (FeedbackKeywords        ? 'feedback'            : 'failed_to_infer_category')
+                            ))))));
+                            
+                            
       if('category' in llmResponse) {
         const providedCategory = llmResponse['category'] as string;
       

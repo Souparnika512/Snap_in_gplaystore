@@ -24,6 +24,26 @@ export class ApiUtils {
     });
   }
 
+  // async getTags(): Promise<HTTPResponse> {
+  //   try {
+  //     // Assuming "ALL_TAGS" is a placeholder for a valid tag ID or a specific value that fetches all tags
+  //     const response: AxiosResponse = await this.devrevSdk.tagsGet({ id: "ALL_TAGS" });
+  //     return { data: response.data, message: 'Tags retrieved successfully', success: true };
+  //   } catch (error: any) {
+  //     if (error.response) {
+  //       const err = `Failed to retrieve tags. Err: ${JSON.stringify(error.response.data)}, Status: ${
+  //         error.response.status
+  //       }`;
+  //       return { ...defaultResponse, message: err };
+  //     } else {
+  //       return { ...defaultResponse, message: error.message };
+  //     }
+  //   }
+  // }
+  
+
+
+
   // Create a timeline entry
   async createTimeLine(payload: publicSDK.TimelineEntriesCreateRequest): Promise<HTTPResponse> {
     try {
