@@ -1,5 +1,5 @@
 version: "2"
-name: "Myntra Reviews"
+name: "Ajio Fashion App Reviews"
 description: "Creates tickets from Google playstore reviews and categorize them into one-of `bug`, `feedback`, `feature_request` or `question`."
 
 service_account:
@@ -19,7 +19,7 @@ inputs:
       description: "The Google Play id of the application (the ?id= parameter on the url)."
       field_type: text
       is_required: true
-      default_value: "com.myntra.android"
+      default_value: "com.ril.ajio"
       ui:
         display_name: Application ID
     - name: default_part_id
@@ -110,8 +110,6 @@ tags:
     description: "Question from the customer side reviews"
   - name: feedback
     description: "General feedback from the customer side"
-  - name: sentiment_analysis
-    description: "This depicts the frequency of keywords occuring in reviews"
   - name: failed_to_infer_category
     description: "Failed to infer category"
 

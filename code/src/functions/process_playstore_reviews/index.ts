@@ -2,7 +2,6 @@ import {publicSDK } from '@devrev/typescript-sdk';
 import * as gplay from "google-play-scraper";
 import { ApiUtils, HTTPResponse } from './utils';
 import {LLMUtils} from './llm_utils';
-// import axios from 'axios';
 
 
 export const run = async (events: any[]) => {
@@ -90,10 +89,12 @@ export const run = async (events: any[]) => {
         console.error(`Error while creating timeline entry: ${postResp.message}`);
         continue;
       }
-      const reviewText = `Ticket created from Playstore review ${review.url}\n\n${review.text}`;
+  
+      const reviewText = `Ticket created from Playstore review ${review.url}\n\n${review.text}\n\n`;
+      // const reviewText = `Ticket created from Playstore review ${review.url}\n\n${review.text}`;
       const reviewTitle = review.title || `Ticket created from Playstore review ${review.url}`;
       const reviewID = review.id;
-      const systemPrompt = `You are an expert at labelling a given Google Play Store Review as bug, feature_request, question or feedback. You are given a review provided by a user for the app ${inputs['app_id']}. You have to label the review as bug, feature_request, question or feedback. The output should be a JSON with fields "category" and "reason". The "category" field should be one of "bug", "feature_request", "question" or "feedback". The "reason" field should be a string explaining the reason for the category. \n\nReview: {review}\n\nOutput:`;
+      const systemPrompt = `You are an expert at labelling a given Google Play Store Review as bug, feature_request, question or feedback. You are given a review provided by a user for the app ${inputs['app_id']}. You have to label the review as discounts_offers, app_interface, customer_support, ease_of_return, bug, feature_request, question or feedback. The output should be a JSON with fields "category" and "reason". The "category" field should be one of "discounts_offers", "app_interface", "customer_support", "ease_of_return", "bug", "feature_request", "question" or "feedback". The "reason" field should be a string explaining the reason for the category. \n\nReview: {review}\n\nOutput:`;
       const humanPrompt = ``;
 
       let llmResponse = {};
@@ -103,15 +104,6 @@ export const run = async (events: any[]) => {
         console.error(`Error while calling LLM: ${err}`);
       }
       let tagsToApply = [];
-      //adding the given reviews in manifest here
-
-      // let inferredCategory = 'bug';
-      // if ('category' in llmResponse) {
-      //   inferredCategory = llmResponse['category'] as string;
-      //   if ((inferredCategory in tags)) {
-      //     inferredCategory = 'bug';
-      //   }
-      // }
      
       const discountsKeywords = /discounts_offers|deals|discounts|offers/i.test(review.text);
       const appinterfaceKeywords = /app_interface|friendly|easy|seamless|experience|commendable|nice|option|user-friendly/i.test(review.text);
@@ -132,7 +124,7 @@ export const run = async (events: any[]) => {
                             (FeedbackKeywords        ? 'feedback'            : 'failed_to_infer_category')
                             ))))));
                             
-                            
+
       if('category' in llmResponse) {
         const providedCategory = llmResponse['category'] as string;
       
@@ -142,24 +134,50 @@ export const run = async (events: any[]) => {
       }
     }
 
+    // Assuming keywordFrequencies is already initialized
+    let keywordFrequencies: { [key: string]: number } = {
+      discounts_offers: 0,
+      app_interface: 0,
+      customer_support: 0,
+      ease_of_return: 0,
+      bug: 0,
+      feature_request: 0,
+      question: 0,
+      feedback: 0,
+    };   
 
-      // let inferredCategory = 'failed_to_infer_category';
-      // if ('category' in llmResponse) {
-      //   inferredCategory = llmResponse['category'] as string;
-      //   if (!(inferredCategory in tags)) {
-      //     inferredCategory = 'failed_to_infer_category';
-      //   }
-      // }
+   let inferredsentimentanalysis: number = 0;
+
+    // Obtain the category string from the LLM response
+    let categorycmp: string = '';
+    if ('category' in llmResponse) {
+      categorycmp = llmResponse['category'] as string;
+    }
+
+    // Check if the category string matches any key in keywordFrequencies
+    if (keywordFrequencies.hasOwnProperty(categorycmp)) {
+    // Increment the frequency count for the matched category
+      keywordFrequencies[categorycmp]++;
+      inferredsentimentanalysis = keywordFrequencies[categorycmp];
+    } else {
+    // Handle the case where the category string doesn't match any key in keywordFrequencies
+      console.log(`Category '${categorycmp}' not found in keywordFrequencies.`);
+    }
+
+    // Create the string with the updated frequency value
+    const outputString: string = `The Sentimental analysis for the category '${categorycmp}' is ${inferredsentimentanalysis} \n The Sentimental Analysis provides great insights for cutomer market reseacrh. It depicts what the customers require the most and it shows the analysis where how frequent a customer enquires about a particular category `;
+
       let inferredCategoryReason = '';
       if ('reason' in llmResponse) {
         inferredCategoryReason = llmResponse['reason'] as string;
       }
 
+
       // Create a ticket with title as review title and description as review text.
       const createTicketResp = await apiUtil.createTicket({
         title: reviewTitle,
         tags: [{id: tags[inferredCategory].id}],
-        body: reviewText,
+        body: reviewText + outputString,
         type: publicSDK.WorkType.Ticket,
         owned_by: [inputs['default_owner_id']],
         applies_to_part: inputs['default_part_id'],
@@ -177,7 +195,6 @@ export const run = async (events: any[]) => {
         continue;
       }
     }
-    // Call an LLM to categorize the review as Bug, Feature request, or Question.
 
   }
 };
