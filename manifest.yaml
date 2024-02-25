@@ -1,5 +1,5 @@
 version: "2"
-name: "Lifestyle Fashion App Reviews"
+name: "Ajio Fashion App Reviews"
 description: "Fetched Google Playstore Fashion App Reviews to conduct market research study on the behavioural analysis of customers and their frequency of categories preferred. The tags considered for categorization includes 'discounts_offers', 'app_interface', 'customer_support', 'ease_of_return', 'bug', 'feature_request', 'question' and 'feedback'. Sentimental Analysis is included with each reviews depicting the frequency of choices of customers based on reviews."
 
 service_account:
@@ -19,7 +19,7 @@ inputs:
       description: "The Google Play id of the application (the ?id= parameter on the url)."
       field_type: text
       is_required: true
-      default_value: "com.applications.lifestyle"
+      default_value: "com.ril.ajio"
       ui:
         display_name: Application ID
     - name: default_part_id
