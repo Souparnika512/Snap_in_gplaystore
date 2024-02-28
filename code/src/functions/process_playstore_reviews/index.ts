@@ -8,6 +8,8 @@ export const run = async (events: any[]) => {
 
   //To store count of reviews from each user for spam detection
   const userReviewCountMap: Map<string, number> = new Map();
+  // To store reviews from each user for spam detection
+  const userReviewsMap: Map<string, Set<string>> = new Map();
 
   for (const event of events) {
     const endpoint: string = event.execution_metadata.devrev_endpoint;
@@ -119,6 +121,34 @@ export const run = async (events: any[]) => {
        
         // If user has not exceeded the daily limit, then increments the user's review count. If user not in map, it initializes count to 1.
         userReviewCountMap.set(userIdentifier, (userReviewCountMap.get(userIdentifier) ?? 0) + 1);
+
+        //another spma detection is to check for previous reviews similarity from same user.
+        const previousReviews = userReviewsMap.get(userIdentifier) || new Set<string>();
+
+        if(previousReviews.has(review.text)) {
+          console.log('Potential spammer: User ${userIdentifier} has posted a similar review for a different product.');
+
+          const spamTicketResp = await apiUtil.createTicket({
+            title: review.title || 'Spam Review - ${userIdentifier}',
+            tags: [{ id: tags['spam'].id}],
+            body: review.text,
+            type: publicSDK.WorkType.Ticket,
+            owned_by: [inputs['default_owner_id']],
+            applies_to_part: inputs['default_part_id'],
+
+            });
+
+            if(!spamTicketResp.success){
+              console.error(`Error while creating spam ticket: ${spamTicketResp.message}`);
+            }
+
+            continue;
+        }
+
+        previousReviews.add(review.text);
+        userReviewsMap.set(userIdentifier, previousReviews);
+
+
       }
 
       // Calculate total rating and count
