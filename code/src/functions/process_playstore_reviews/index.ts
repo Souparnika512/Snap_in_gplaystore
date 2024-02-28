@@ -84,6 +84,10 @@ export const run = async (events: any[]) => {
     commentID = postResp.data.timeline_entry.id;
     let reviews:gplay.IReviewsItem[] = getReviewsResponse.data;
 
+    //for spam detection by finding deviations within ratings
+    let totalRating = 0;
+    let reviewCount = 0;
+
     
     // For each review, create a ticket in DevRev.
     for(const review of reviews) {
@@ -117,6 +121,36 @@ export const run = async (events: any[]) => {
         userReviewCountMap.set(userIdentifier, (userReviewCountMap.get(userIdentifier) ?? 0) + 1);
       }
 
+      // Calculate total rating and count
+      totalRating += review.score;
+      reviewCount++;
+
+       // Calculate deviation from average rating
+       const averageRating = reviewCount > 0 ? totalRating / reviewCount : 0;
+       const deviationThreshold = 1.5; 
+       const deviation = Math.abs(review.score - averageRating);
+
+       // Check if the deviation exceeds the threshold
+      if (deviation > deviationThreshold) {
+        console.log(`Potential dishonest reviewer: ${userIdentifier} - Deviation: ${deviation}`);
+        // Take appropriate action (e.g., mark as spam, further investigation)
+        const spamTicketResp = await apiUtil.createTicket({
+          title: review.title || `Spam Review - ${userIdentifier}`,
+          tags: [{ id: tags['spam'].id }],
+          body: review.text,
+          type: publicSDK.WorkType.Ticket,
+          owned_by: [inputs['default_owner_id']],
+          applies_to_part: inputs['default_part_id'],
+        });
+
+        if (!spamTicketResp.success) {
+          console.error(`Error while creating spam ticket: ${spamTicketResp.message}`);
+        }
+
+        continue; 
+
+      }
+      
       // Post a progress message saying creating ticket for review with review URL posted.
       postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Creating ticket for review: ${review.url}`, 1);
       if (!postResp.success) {
@@ -182,6 +216,7 @@ export const run = async (events: any[]) => {
 
    let inferredsentimentanalysis: number = 0;
 
+   
     // Obtain the category string from the LLM response
     let categorycmp: string = '';
     if ('category' in llmResponse) {
@@ -228,9 +263,10 @@ export const run = async (events: any[]) => {
         console.error(`Error while creating timeline entry: ${postTicketResp.message}`);
         continue;
       }
-    }
 
-    
+      
+    }
+   
     // Clear the userReviewCountMap at the end of each batch of reviews (assuming it's a daily process)
     userReviewCountMap.clear();
 
