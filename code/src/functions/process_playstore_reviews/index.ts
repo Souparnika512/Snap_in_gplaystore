@@ -5,6 +5,10 @@ import {LLMUtils} from './llm_utils';
 
 
 export const run = async (events: any[]) => {
+
+  //To store count of reviews from each user for spam detection
+  const userReviewCountMap: Map<string, number> = new Map();
+
   for (const event of events) {
     const endpoint: string = event.execution_metadata.devrev_endpoint;
     const token: string = event.context.secrets.service_account_token;
@@ -83,6 +87,36 @@ export const run = async (events: any[]) => {
     
     // For each review, create a ticket in DevRev.
     for(const review of reviews) {
+
+      //for spam detection
+      const userIdentifier = review.userName;   //extracting user identifier from the current review.
+
+      // Check if the user identifier is defined
+      if (userIdentifier) {
+        // Check if the user has exceeded the daily review limit (5 in this case)
+        if ((userReviewCountMap.get(userIdentifier) ?? 0) > 5) {
+          console.log(`User ${userIdentifier} has exceeded the daily review limit. Ignoring review.`);
+
+          const spamTicketResp = await apiUtil.createTicket({
+            title: review.title || `Spam Review - ${userIdentifier}`,
+            tags: [{ id: tags['spam'].id }],
+            body: review.text,
+            type: publicSDK.WorkType.Ticket,
+            owned_by: [inputs['default_owner_id']],
+            applies_to_part: inputs['default_part_id'],
+          });
+    
+          if (!spamTicketResp.success) {
+            console.error(`Error while creating spam ticket: ${spamTicketResp.message}`);
+          }
+
+          continue;
+        }
+       
+        // If user has not exceeded the daily limit, then increments the user's review count. If user not in map, it initializes count to 1.
+        userReviewCountMap.set(userIdentifier, (userReviewCountMap.get(userIdentifier) ?? 0) + 1);
+      }
+
       // Post a progress message saying creating ticket for review with review URL posted.
       postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Creating ticket for review: ${review.url}`, 1);
       if (!postResp.success) {
@@ -195,6 +229,10 @@ export const run = async (events: any[]) => {
         continue;
       }
     }
+
+    
+    // Clear the userReviewCountMap at the end of each batch of reviews (assuming it's a daily process)
+    userReviewCountMap.clear();
 
   }
 };

@@ -1,5 +1,5 @@
 version: "2"
-name: "Ajio Fashion App Reviews"
+name: "Fashion App Reviews"
 description: "Fetched Google Playstore Fashion App Reviews to conduct market research study on the behavioural analysis of customers and their frequency of categories preferred. The tags considered for categorization includes 'discounts_offers', 'app_interface', 'customer_support', 'ease_of_return', 'bug', 'feature_request', 'question' and 'feedback'. Sentimental Analysis is included with each reviews depicting the frequency of choices of customers based on reviews."
 
 service_account:
@@ -110,6 +110,8 @@ tags:
     description: "Question from the customer side reviews"
   - name: feedback
     description: "General feedback from the customer side"
+  - name: spam
+    description: "Reviews identified as spam."
   - name: failed_to_infer_category
     description: "Failed to infer category"
 
@@ -117,7 +119,7 @@ tags:
 commands:
   - name: playstore_reviews_process
     namespace: devrev
-    description: Fetches reviews from Google Playstore and creates tickets
+    description: Fetches reviews from Google Playstore, performs spam detection and creates tickets
     surfaces:
       - surface: discussions
         object_types:
@@ -128,4 +130,4 @@ commands:
 
 functions:
   - name: process_playstore_reviews
-    description: Fetches reviews from Google Playstore and creates tickets
+    description: Fetches reviews from Google Playstore, performs spam detection and creates tickets
