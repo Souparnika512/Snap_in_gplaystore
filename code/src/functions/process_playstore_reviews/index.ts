@@ -1,3 +1,16 @@
+
+// In this code, we have added the logic to incorporate the tags, sentimental analysis and spam detection.
+// Different keywords are specified to match with the keywords in reviews to detect particular tags.
+// For each tag, the keywords are different and once ticket is created, the identified tag for that particular review would be generated.
+// The logic for term frequency is also implemented in this code, so as to determine the sentimental analysis.
+// So, based upon the frequency of particular keywords in reviews, it's sentimental analysis value would be generated, thereby helps to understand the minds of reviewers.
+// There are mainly three cases added in which the ticket for spam would be generated.
+// The presence of similar reviews for different products by the same reviewer has been shown to be a strong indication of a spammer. So, when this happens, a ticket for spam detection would be generated.
+// It was observed that spammers’ ratings tend to deviate from the average review rating at a far higher rate than legitimate reviewers, thus identifying user rating deviations may help in detection of dishonest reviewers. In this case also, ticket for spam detection would be generated.
+// It was observed that about 75 % of spammers write more than 5 reviews on any given day. Ticket for spam detection would be generated in this case as well.
+
+
+
 import {publicSDK } from '@devrev/typescript-sdk';
 import * as gplay from "google-play-scraper";
 import { ApiUtils, HTTPResponse } from './utils';
@@ -6,7 +19,7 @@ import {LLMUtils} from './llm_utils';
 
 export const run = async (events: any[]) => {
 
-  //To store count of reviews from each user for spam detection
+  // To store count of reviews from each user for spam detection
   const userReviewCountMap: Map<string, number> = new Map();
   // To store reviews from each user for spam detection
   const userReviewsMap: Map<string, Set<string>> = new Map();
@@ -60,6 +73,7 @@ export const run = async (events: any[]) => {
       }
       commentID = postResp.data.timeline_entry.id;
     }
+
     // Make sure number of reviews is <= 100.
     if (numReviews > 100) {
       postResp  = await apiUtil.postTextMessage(snapInId, 'Please enter a number less than 100', commentID);
@@ -69,6 +83,7 @@ export const run = async (events: any[]) => {
       }
       commentID = postResp.data.timeline_entry.id;
     }
+
     // Call google playstore scraper to fetch those number of reviews.
 
     let getReviewsResponse:any = await gplay.reviews({
@@ -77,7 +92,9 @@ export const run = async (events: any[]) => {
       num: numReviews,
       throttle: 10,
     });    
+
     // Post an update about the number of reviews fetched.
+
     postResp  = await apiUtil.postTextMessageWithVisibilityTimeout(snapInId, `Fetched ${numReviews} reviews, creating tickets now.`, 1);
     if (!postResp.success) {
       console.error(`Error while creating timeline entry: ${postResp.message}`);
@@ -87,6 +104,7 @@ export const run = async (events: any[]) => {
     let reviews:gplay.IReviewsItem[] = getReviewsResponse.data;
 
     //for spam detection by finding deviations within ratings
+
     let totalRating = 0;
     let reviewCount = 0;
 
@@ -122,7 +140,7 @@ export const run = async (events: any[]) => {
         // If user has not exceeded the daily limit, then increments the user's review count. If user not in map, it initializes count to 1.
         userReviewCountMap.set(userIdentifier, (userReviewCountMap.get(userIdentifier) ?? 0) + 1);
 
-        //another spma detection is to check for previous reviews similarity from same user.
+        //another spma detection is to check for previous reviews similarity from same user. The presence of similar reviews by the same reviewer is taken as a strong indication of a spammer.
         const previousReviews = userReviewsMap.get(userIdentifier) || new Set<string>();
 
         if(previousReviews.has(review.text)) {
@@ -155,15 +173,15 @@ export const run = async (events: any[]) => {
       totalRating += review.score;
       reviewCount++;
 
-       // Calculate deviation from average rating
+       // Calculate deviation from average rating. It was observed that spammers ratings tend to deviate from the average review rating at a far higher rate than legitimate reviewers.
+       // Thus, identifying user rating deviations may help in detection of dishonest reviewers. 
        const averageRating = reviewCount > 0 ? totalRating / reviewCount : 0;
        const deviationThreshold = 1.5; 
        const deviation = Math.abs(review.score - averageRating);
 
-       // Check if the deviation exceeds the threshold
+       // This checks if the deviation exceeds the threshold
       if (deviation > deviationThreshold) {
         console.log(`Potential dishonest reviewer: ${userIdentifier} - Deviation: ${deviation}`);
-        // Take appropriate action (e.g., mark as spam, further investigation)
         const spamTicketResp = await apiUtil.createTicket({
           title: review.title || `Spam Review - ${userIdentifier}`,
           tags: [{ id: tags['spam'].id }],
@@ -232,7 +250,7 @@ export const run = async (events: any[]) => {
       }
     }
 
-    // Assuming keywordFrequencies is already initialized
+    //logic for finding the term frequency within reviews.
     let keywordFrequencies: { [key: string]: number } = {
       discounts_offers: 0,
       app_interface: 0,
@@ -297,7 +315,6 @@ export const run = async (events: any[]) => {
       
     }
    
-    // Clear the userReviewCountMap at the end of each batch of reviews (assuming it's a daily process)
     userReviewCountMap.clear();
 
   }
